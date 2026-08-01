@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="SchoolManagement.API/SchoolManagement.API.csproj" />
+  <Project Path="SchoolManagement.Application/SchoolManagement.Application.csproj" />
+  <Project Path="SchoolManagement.Domain/SchoolManagement.Domain.csproj" />
+  <Project Path="SchoolManagement.Infrastructure/SchoolManagement.Infrastructure.csproj" />
+  <Project Path="SchoolManagement.Tests/SchoolManagement.Tests.csproj" />
+</Solution>
