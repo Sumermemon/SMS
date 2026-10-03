@@ -41,7 +41,9 @@ public class StudentService : IStudentService
                 s.Address ?? string.Empty,
                 s.DateOfBirth,
                 s.Phone,
-                s.Email
+                s.Email,
+                s.ClassId,
+                s.SectionId
             ));
 
         return new PagedResult<StudentListDto>(paged, total, page, pageSize);

@@ -39,7 +39,14 @@ export default function AttendancePage() {
 
   // Initialize attendance state when sheetData changes
   const handleLoadStudents = () => {
-    if (!sheetData) return
+    if (!form.classId || !form.sectionId) {
+      toast.error('Please select both class and section')
+      return
+    }
+    if (!sheetData || sheetData.length === 0) {
+      toast.error('No students found for this class and section')
+      return
+    }
     const newState: Record<number, { isPresent: boolean, remarks: string }> = {}
     const day = new Date(form.date).getDate()
     
@@ -78,6 +85,10 @@ export default function AttendancePage() {
     })
   }
 
+  const filteredSections = form.classId && sections
+    ? (sections as any[]).filter(s => !s.classId || s.classId === Number(form.classId))
+    : []
+
   return (
     <div>
       <div className="filter-bar" style={{ display: 'flex', gap: 15, flexWrap: 'wrap' }}>
@@ -87,21 +98,43 @@ export default function AttendancePage() {
           type="date" 
           className="form-control" 
           value={form.date} 
-          onChange={e => setForm({ ...form, date: e.target.value })} 
+          onChange={e => {
+            setForm({ ...form, date: e.target.value })
+            setAttendanceState({})
+          }} 
         />
 
-        <select className="form-control" value={form.classId} onChange={e => setForm({ ...form, classId: e.target.value, sectionId: '' })}>
+        <select 
+          className="form-control" 
+          value={form.classId} 
+          onChange={e => {
+            setForm({ ...form, classId: e.target.value, sectionId: '' })
+            setAttendanceState({})
+          }}
+        >
           <option value="">Select Class...</option>
           {classes?.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
 
-        <select className="form-control" value={form.sectionId} onChange={e => setForm({ ...form, sectionId: e.target.value })}>
-          <option value="">Select Section...</option>
-          {sections?.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        <select 
+          className="form-control" 
+          value={form.sectionId} 
+          disabled={!form.classId}
+          onChange={e => {
+            setForm({ ...form, sectionId: e.target.value })
+            setAttendanceState({})
+          }}
+        >
+          <option value="">{form.classId ? 'Select Section...' : 'Select Class First'}</option>
+          {filteredSections.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
 
-        <button className="btn btn-primary" onClick={handleLoadStudents} disabled={!sheetData}>
-          Load Sheet
+        <button 
+          className="btn btn-primary" 
+          onClick={handleLoadStudents} 
+          disabled={isLoading || !form.classId || !form.sectionId}
+        >
+          {isLoading ? 'Loading…' : 'Load Sheet'}
         </button>
       </div>
 

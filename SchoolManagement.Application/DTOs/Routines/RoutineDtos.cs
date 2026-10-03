@@ -3,9 +3,13 @@ namespace SchoolManagement.Application.DTOs.Routines;
 public record ClassRoutineListDto(
     int Id,
     string Day,
+    int ClassId,
     string ClassName,
-    string SubjectName,
+    int SectionId,
     string SectionName,
+    int SubjectId,
+    string SubjectName,
+    int? TeacherId,
     string? TeacherName,
     string TimeSlot,
     string? EffectiveDate

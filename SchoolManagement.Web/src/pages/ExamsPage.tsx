@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { examApi, subjectApi, classApi, sectionApi } from '@/lib/services'
-import { Plus, Search, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, BookOpen } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useAuth } from '@/contexts/AuthContext'
+import Drawer from '@/components/Drawer'
 
 export default function ExamsPage() {
   const qc = useQueryClient()
+  const { hasPermission } = useAuth()
   const [search, setSearch] = useState('')
   const [classId, setClassId] = useState('')
   const [page, setPage] = useState(1)
@@ -43,12 +46,37 @@ export default function ExamsPage() {
   }
 
   function handleSave() {
+    if (!form.name || !String(form.name).trim()) {
+      toast.error('Please enter exam name')
+      return
+    }
+    if (!form.classId) {
+      toast.error('Please select a class')
+      return
+    }
+    if (!form.sectionId) {
+      toast.error('Please select a section')
+      return
+    }
+    if (!form.subjectId) {
+      toast.error('Please select a subject')
+      return
+    }
+    if (!form.totalMarks || Number(form.totalMarks) <= 0) {
+      toast.error('Please enter valid total marks')
+      return
+    }
+    if (!form.examDate) {
+      toast.error('Please select an exam date')
+      return
+    }
+
     const payload = {
       name: form.name,
       subjectId: Number(form.subjectId),
       classId: Number(form.classId),
       sectionId: Number(form.sectionId),
-      examTime: form.examTime,
+      examTime: form.examTime || '10:00:00',
       examDate: form.examDate,
       totalMarks: Number(form.totalMarks),
       isPublished: Boolean(form.isPublished)
@@ -76,7 +104,9 @@ export default function ExamsPage() {
           <option value="">All Classes</option>
           {classes?.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <button className="btn btn-primary" onClick={openCreate}><Plus size={15} /> Create Exam</button>
+        {hasPermission('exams.create') && (
+          <button className="btn btn-primary" onClick={openCreate}><Plus size={15} /> Create Exam</button>
+        )}
       </div>
 
       <div className="card">
@@ -85,7 +115,20 @@ export default function ExamsPage() {
             : filteredExams.length === 0 ? <div className="empty-state"><div style={{ fontSize: 40 }}>📝</div><p>No exams found</p></div>
             : (
               <table>
-                <thead><tr><th>EXAM NAME</th><th>CLASS</th><th>SECTION</th><th>SUBJECT</th><th>DATE</th><th>TIME</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>EXAM NAME</th>
+                    <th>CLASS</th>
+                    <th>SECTION</th>
+                    <th>SUBJECT</th>
+                    <th>DATE</th>
+                    <th>TIME</th>
+                    <th>STATUS</th>
+                    {(hasPermission('exams.edit') || hasPermission('exams.delete')) && (
+                      <th>ACTIONS</th>
+                    )}
+                  </tr>
+                </thead>
                 <tbody>
                   {filteredExams.map((e: any) => (
                     <tr key={e.id}>
@@ -100,32 +143,37 @@ export default function ExamsPage() {
                           {e.isPublished ? 'Published' : 'Draft'}
                         </span>
                       </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button className="btn btn-ghost btn-icon btn-sm" onClick={async () => {
-                            // fetch details for edit
-                            try {
-                              const res = await examApi.getById(e.id)
-                              const d = res.data
-                              setEditing(d)
-                              setForm({
-                                name: d.name,
-                                subjectId: String(d.subjectId),
-                                classId: String(d.classId),
-                                sectionId: String(d.sectionId),
-                                examTime: d.examTime,
-                                examDate: d.examDate,
-                                totalMarks: d.totalMarks,
-                                isPublished: d.isPublished
-                              })
-                              setShowModal(true)
-                            } catch (err) {
-                              toast.error('Failed to load details')
-                            }
-                          }}><Pencil size={13} /></button>
-                          <button className="btn btn-danger btn-icon btn-sm" onClick={() => { if (confirm('Delete?')) deleteMut.mutate(e.id) }}><Trash2 size={13} /></button>
-                        </div>
-                      </td>
+                      {(hasPermission('exams.edit') || hasPermission('exams.delete')) && (
+                        <td>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            {hasPermission('exams.edit') && (
+                              <button className="btn btn-ghost btn-icon btn-sm" onClick={async () => {
+                                try {
+                                  const res = await examApi.getById(e.id)
+                                  const d = res.data
+                                  setEditing(d)
+                                  setForm({
+                                    name: d.name,
+                                    subjectId: String(d.subjectId),
+                                    classId: String(d.classId),
+                                    sectionId: String(d.sectionId),
+                                    examTime: d.examTime,
+                                    examDate: d.examDate,
+                                    totalMarks: d.totalMarks,
+                                    isPublished: d.isPublished
+                                  })
+                                  setShowModal(true)
+                                } catch (err) {
+                                  toast.error('Failed to load details')
+                                }
+                              }}><Pencil size={13} /></button>
+                            )}
+                            {hasPermission('exams.delete') && (
+                              <button className="btn btn-danger btn-icon btn-sm" onClick={() => { if (confirm('Delete?')) deleteMut.mutate(e.id) }}><Trash2 size={13} /></button>
+                            )}
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -144,68 +192,69 @@ export default function ExamsPage() {
         )}
       </div>
 
-      {showModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
-          <div className="modal" style={{ width: 500 }}>
-            <div className="modal-header">
-              <h2 className="modal-title">{editing ? 'Edit Exam' : 'Create Exam'}</h2>
-              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setShowModal(false)}>✕</button>
-            </div>
-            <div className="form-grid">
-              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                <label className="form-label">Exam Name</label>
-                <input className="form-control" value={form.name as string} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Mid Term 2026" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Class</label>
-                <select className="form-control" value={form.classId as string} onChange={e => setForm(f => ({ ...f, classId: e.target.value, sectionId: '' }))}>
-                  <option value="">Select Class</option>
-                  {classes?.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Section</label>
-                <select className="form-control" value={form.sectionId as string} onChange={e => setForm(f => ({ ...f, sectionId: e.target.value }))}>
-                  <option value="">Select Section</option>
-                  {sections?.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Subject</label>
-                <select className="form-control" value={form.subjectId as string} onChange={e => setForm(f => ({ ...f, subjectId: e.target.value }))}>
-                  <option value="">Select Subject</option>
-                  {subjects?.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Total Marks</label>
-                <input type="number" className="form-control" value={form.totalMarks as number} onChange={e => setForm(f => ({ ...f, totalMarks: e.target.value }))} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Exam Date</label>
-                <input type="date" className="form-control" value={form.examDate as string} onChange={e => setForm(f => ({ ...f, examDate: e.target.value }))} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Exam Time</label>
-                <input type="time" className="form-control" value={form.examTime as string} onChange={e => setForm(f => ({ ...f, examTime: e.target.value + (e.target.value.length === 5 ? ':00' : '') }))} />
-              </div>
-              
-              {editing && (
-                <div className="form-group" style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <input type="checkbox" id="isPublished" checked={form.isPublished as boolean} onChange={e => setForm(f => ({ ...f, isPublished: e.target.checked }))} style={{ width: 18, height: 18 }} />
-                  <label htmlFor="isPublished" className="form-label" style={{ marginBottom: 0 }}>Publish Results</label>
-                </div>
-              )}
-            </div>
-            <div className="flex justify-end gap-md mt-lg">
-              <button className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={createMut.isPending || updateMut.isPending || !form.name || !form.classId || !form.sectionId || !form.subjectId}>
-                {createMut.isPending || updateMut.isPending ? 'Saving…' : editing ? 'Update' : 'Create Exam'}
-              </button>
-            </div>
+      {/* ── Slide-over Sidebar Drawer for Exams (> 3 fields) ── */}
+      <Drawer
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title={editing ? 'Edit Examination' : 'Schedule New Exam'}
+        subtitle={editing ? 'Update exam timetable & parameters' : 'Configure exam subject, class, and date'}
+        icon={<BookOpen size={20} />}
+        footer={
+          <>
+            <button className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
+            <button className="btn btn-primary" onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
+              {createMut.isPending || updateMut.isPending ? 'Saving…' : editing ? 'Update Exam' : 'Create Exam'}
+            </button>
+          </>
+        }
+      >
+        <div className="drawer-form-grid">
+          <div className="form-group drawer-col-full">
+            <label className="form-label">Exam Name *</label>
+            <input className="form-control" value={form.name as string} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Mid Term Assessment 2026" />
           </div>
+          <div className="form-group">
+            <label className="form-label">Class *</label>
+            <select className="form-control" value={form.classId as string} onChange={e => setForm(f => ({ ...f, classId: e.target.value, sectionId: '' }))}>
+              <option value="">Select Class</option>
+              {classes?.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Section *</label>
+            <select className="form-control" value={form.sectionId as string} onChange={e => setForm(f => ({ ...f, sectionId: e.target.value }))}>
+              <option value="">Select Section</option>
+              {sections?.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Subject *</label>
+            <select className="form-control" value={form.subjectId as string} onChange={e => setForm(f => ({ ...f, subjectId: e.target.value }))}>
+              <option value="">Select Subject</option>
+              {subjects?.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Total Marks *</label>
+            <input type="number" className="form-control" value={form.totalMarks as number} onChange={e => setForm(f => ({ ...f, totalMarks: e.target.value }))} placeholder="100" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Exam Date *</label>
+            <input type="date" className="form-control" value={form.examDate as string} onChange={e => setForm(f => ({ ...f, examDate: e.target.value }))} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Exam Time</label>
+            <input type="time" className="form-control" value={form.examTime as string} onChange={e => setForm(f => ({ ...f, examTime: e.target.value + (e.target.value.length === 5 ? ':00' : '') }))} />
+          </div>
+          
+          {editing && (
+            <div className="form-group drawer-col-full" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+              <input type="checkbox" id="isPublished" checked={form.isPublished as boolean} onChange={e => setForm(f => ({ ...f, isPublished: e.target.checked }))} style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+              <label htmlFor="isPublished" className="form-label" style={{ cursor: 'pointer', margin: 0 }}>Publish Results to Students & Parents</label>
+            </div>
+          )}
         </div>
-      )}
+      </Drawer>
     </div>
   )
 }

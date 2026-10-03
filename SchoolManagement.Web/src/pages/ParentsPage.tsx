@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { parentApi } from '@/lib/services'
-import { Plus, Search, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Users } from 'lucide-react'
+import { ListToolbar, SortableHeader, sortRecords, type SortDirection } from '@/components/ListControls'
 import toast from 'react-hot-toast'
+import { useAuth } from '@/contexts/AuthContext'
+import Drawer from '@/components/Drawer'
 
 interface ParentData {
   id: number
@@ -17,10 +20,14 @@ interface ParentData {
 
 export default function ParentsPage() {
   const qc = useQueryClient()
+  const { hasPermission } = useAuth()
   const [page, setPage] = useState(1)
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<ParentData | null>(null)
   const [form, setForm] = useState<Record<string, string>>({})
+  const [search, setSearch] = useState('')
+  const [sortColumn, setSortColumn] = useState('name')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
   const { data, isLoading } = useQuery({
     queryKey: ['parents', page],
@@ -58,110 +65,147 @@ export default function ParentsPage() {
   }
 
   function handleSave() {
+    if (!form.name?.trim()) {
+      toast.error('Parent full name is required')
+      return
+    }
+    if (!form.phone?.trim()) {
+      toast.error('Phone number is required')
+      return
+    }
+
     const payload = { ...form }
     if (editing) updateMut.mutate({ id: editing.id, data: payload })
     else createMut.mutate(payload)
   }
 
   const parents: ParentData[] = data?.data ?? []
+  const changeSort = (column: string) => { setSortDirection(current => sortColumn === column && current === 'asc' ? 'desc' : 'asc'); setSortColumn(column) }
+  const visibleParents = sortRecords(parents.filter(parent => `${parent.name} ${parent.email} ${parent.phone} ${parent.occupation ?? ''} ${parent.address ?? ''}`.toLowerCase().includes(search.toLowerCase())), sortColumn, sortDirection)
   
   return (
     <div>
-      <div className="filter-bar">
-        <h2 style={{ margin: 0 }}>Parents</h2>
-        <div style={{ flex: 1 }}></div>
-        <button className="btn btn-primary" onClick={openCreate}>
-          <Plus size={15} /> Add Parent
-        </button>
-      </div>
+      <ListToolbar search={search} onSearchChange={setSearch} placeholder="Search parents or guardians" onClear={search ? () => setSearch('') : undefined}>
+        {hasPermission('parents.create') && (
+          <button className="btn btn-primary" onClick={openCreate}>
+            <Plus size={15} /> Add Parent
+          </button>
+        )}
+      </ListToolbar>
 
-      <div className="card">
+      <div className="card" style={{ padding: 0 }}>
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}>
+          <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-1)' }}>Parent Records</div>
+        </div>
+
         <div className="table-wrapper">
           {isLoading ? (
-            <div className="empty-state">Loading...</div>
+            <div className="loader"><div className="spinner" /></div>
+          ) : !parents.length ? (
+            <div className="empty-state">
+              <p>No parent records found</p>
+              <p className="empty-state-sub">Add a parent or guardian record</p>
+            </div>
           ) : (
-            <table className="table">
+            <table>
               <thead>
                 <tr>
-                  <th>Parent Name</th>
-                  <th>Contact Info</th>
-                  <th>Occupation</th>
-                  <th>Address</th>
-                  <th style={{ width: 100 }}>Actions</th>
+                  <SortableHeader label="Parent name" column="name" activeColumn={sortColumn} direction={sortDirection} onSort={changeSort} />
+                  <SortableHeader label="Contact" column="email" activeColumn={sortColumn} direction={sortDirection} onSort={changeSort} />
+                  <SortableHeader label="Occupation" column="occupation" activeColumn={sortColumn} direction={sortDirection} onSort={changeSort} />
+                  <SortableHeader label="Address" column="address" activeColumn={sortColumn} direction={sortDirection} onSort={changeSort} />
+                  {(hasPermission('parents.edit') || hasPermission('parents.delete')) && (
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
-                {parents.map((p) => (
+                {visibleParents.map((p) => (
                   <tr key={p.id}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div className="avatar" style={{ width: 36, height: 36, background: 'linear-gradient(135deg, #f59e0b, #d97706)', fontSize: 13 }}>{p.name.charAt(0)}</div>
+                        <div className="avatar" style={{ width: 32, height: 32, background: 'var(--yellow)', fontSize: 12 }}>
+                          {p.name.charAt(0)}
+                        </div>
                         <div>
-                          <strong>{p.name}</strong>
-                          {p.children && p.children.length > 0 && <div style={{ fontSize: 11, color: 'var(--clr-text-muted)' }}>Children: {p.children.join(', ')}</div>}
+                          <strong style={{ color: 'var(--text-1)', fontWeight: 500 }}>{p.name}</strong>
+                          {p.children && p.children.length > 0 && (
+                            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                              Children: {p.children.join(', ')}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
                     <td>
-                      <div>{p.phone}</div>
-                      <div style={{ fontSize: 12, color: 'var(--clr-text-muted)' }}>{p.email}</div>
+                      <div style={{ color: 'var(--text-1)' }}>{p.phone || '—'}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{p.email || '—'}</div>
                     </td>
-                    <td>{p.occupation || '-'}</td>
-                    <td>{p.address || '-'}</td>
-                    <td>
-                      <div className="action-buttons">
-                        <button className="btn-icon text-primary" onClick={() => openEdit(p)}>
-                          <Pencil size={15} />
-                        </button>
-                        <button className="btn-icon text-danger" onClick={() => { if (confirm('Delete this parent?')) deleteMut.mutate(p.id) }}>
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
+                    <td style={{ color: 'var(--text-2)' }}>{p.occupation || '—'}</td>
+                    <td style={{ color: 'var(--text-3)', fontSize: 12.5 }}>{p.address || '—'}</td>
+                    {(hasPermission('parents.edit') || hasPermission('parents.delete')) && (
+                      <td>
+                        <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                          {hasPermission('parents.edit') && (
+                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(p)} title="Edit">
+                              <Pencil size={13} />
+                            </button>
+                          )}
+                          {hasPermission('parents.delete') && (
+                            <button className="btn btn-danger btn-icon btn-sm" onClick={() => { if (confirm('Delete this parent?')) deleteMut.mutate(p.id) }} title="Delete">
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
-                {!parents.length && <tr><td colSpan={5} className="empty-state">No parents found</td></tr>}
               </tbody>
             </table>
           )}
         </div>
       </div>
 
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 600 }}>
-            <div className="modal-header">
-              <h2>{editing ? 'Edit Parent' : 'Add New Parent'}</h2>
-            </div>
-            <div className="modal-body form-grid">
-              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Full Name</label>
-                <input className="form-control" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label>Phone Number</label>
-                <input className="form-control" value={form.phone || ''} onChange={e => setForm({ ...form, phone: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label>Email Address</label>
-                <input type="email" className="form-control" value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} />
-              </div>
-              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Occupation</label>
-                <input className="form-control" value={form.occupation || ''} onChange={e => setForm({ ...form, occupation: e.target.value })} />
-              </div>
-              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Address</label>
-                <textarea className="form-control" value={form.address || ''} onChange={e => setForm({ ...form, address: e.target.value })} />
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>Save</button>
-            </div>
+      {/* ── Slide-over Sidebar Drawer for Parents (> 3 fields) ── */}
+      <Drawer
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title={editing ? 'Edit Parent Record' : 'Add New Parent'}
+        subtitle={editing ? `Update ${editing.name || ''} information` : 'Enter parent/guardian contact details'}
+        icon={<Users size={20} />}
+        footer={
+          <>
+            <button className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancel</button>
+            <button className="btn btn-primary" onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>
+              {createMut.isPending || updateMut.isPending ? 'Saving…' : editing ? 'Update Record' : 'Add Parent'}
+            </button>
+          </>
+        }
+      >
+        <div className="drawer-form-grid">
+          <div className="form-group drawer-col-full">
+            <label className="form-label">Full Name *</label>
+            <input className="form-control" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Parent full name" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Phone Number *</label>
+            <input className="form-control" value={form.phone || ''} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="e.g. +92 300 1234567" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Email Address</label>
+            <input type="email" className="form-control" value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="parent@email.com" />
+          </div>
+          <div className="form-group drawer-col-full">
+            <label className="form-label">Occupation</label>
+            <input className="form-control" value={form.occupation || ''} onChange={e => setForm({ ...form, occupation: e.target.value })} placeholder="e.g. Engineer, Doctor, Business" />
+          </div>
+          <div className="form-group drawer-col-full">
+            <label className="form-label">Address</label>
+            <input className="form-control" value={form.address || ''} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Residential address" />
           </div>
         </div>
-      )}
+      </Drawer>
     </div>
   )
 }

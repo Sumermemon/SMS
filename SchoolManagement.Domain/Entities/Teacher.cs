@@ -21,6 +21,8 @@ public class Teacher : BaseEntity
     public Class? Class { get; set; }
     public int? SectionId { get; set; }
     public Section? Section { get; set; }
+    public string? AssignedSubjectIds { get; set; }  // Comma-separated subject IDs: "1,2,5"
+    public string? AssignedClassIds { get; set; }    // Comma-separated class IDs: "1,3"
     public string? UserId { get; set; }  // Link to ApplicationUser
     public ICollection<ClassRoutine> ClassRoutines { get; set; } = new List<ClassRoutine>();
     public ICollection<TeacherPayment> Payments { get; set; } = new List<TeacherPayment>();

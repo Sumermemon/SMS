@@ -13,7 +13,11 @@ public record TeacherListDto(
     string? Address,
     string Phone,
     string Email,
-    string JoiningDate
+    string JoiningDate,
+    List<string>? Subjects = null,
+    List<string>? Classes = null,
+    List<int>? AssignedSubjectIds = null,
+    List<int>? AssignedClassIds = null
 );
 
 public record TeacherDetailDto(
@@ -33,7 +37,11 @@ public record TeacherDetailDto(
     int? ClassId,
     string? ClassName,
     int? SectionId,
-    string? SectionName
+    string? SectionName,
+    List<string>? Subjects = null,
+    List<string>? Classes = null,
+    List<int>? AssignedSubjectIds = null,
+    List<int>? AssignedClassIds = null
 );
 
 public record CreateTeacherDto(
@@ -49,7 +57,9 @@ public record CreateTeacherDto(
     DateOnly JoiningDate,
     int? SubjectId,
     int? ClassId,
-    int? SectionId
+    int? SectionId,
+    List<int>? AssignedSubjectIds = null,
+    List<int>? AssignedClassIds = null
 );
 
 public record UpdateTeacherDto(
@@ -65,5 +75,7 @@ public record UpdateTeacherDto(
     DateOnly JoiningDate,
     int? SubjectId,
     int? ClassId,
-    int? SectionId
+    int? SectionId,
+    List<int>? AssignedSubjectIds = null,
+    List<int>? AssignedClassIds = null
 );

@@ -12,8 +12,8 @@ using SchoolManagement.Infrastructure.Data;
 namespace SchoolManagement.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260801082800_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260905073517_AddExceptionLogAndTenantExpiry")]
+    partial class AddExceptionLogAndTenantExpiry
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,37 +24,6 @@ namespace SchoolManagement.Infrastructure.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("text")
-                        .HasColumnName("id");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("text")
-                        .HasColumnName("concurrency_stamp");
-
-                    b.Property<string>("Name")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("name");
-
-                    b.Property<string>("NormalizedName")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("normalized_name");
-
-                    b.HasKey("Id")
-                        .HasName("p_k_asp_net_roles");
-
-                    b.HasIndex("NormalizedName")
-                        .IsUnique()
-                        .HasDatabaseName("role_name_index");
-
-                    b.ToTable("asp_net_roles", (string)null);
-                });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
@@ -231,6 +200,10 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("student_id");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -270,6 +243,14 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("name");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("text")
+                        .HasColumnName("note");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -323,6 +304,10 @@ namespace SchoolManagement.Infrastructure.Migrations
                     b.Property<int?>("TeacherId")
                         .HasColumnType("integer")
                         .HasColumnName("teacher_id");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
 
                     b.Property<string>("TimeSlot")
                         .IsRequired()
@@ -398,6 +383,10 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("subject_id");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
+
                     b.Property<int>("TotalMarks")
                         .HasColumnType("integer")
                         .HasColumnName("total_marks");
@@ -460,6 +449,10 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("student_id");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -474,6 +467,67 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("exam_grades");
+                });
+
+            modelBuilder.Entity("SchoolManagement.Domain.Entities.ExceptionLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsResolved")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_resolved");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("message");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<string>("RequestMethod")
+                        .HasColumnType("text")
+                        .HasColumnName("request_method");
+
+                    b.Property<string>("RequestPath")
+                        .HasColumnType("text")
+                        .HasColumnName("request_path");
+
+                    b.Property<string>("ResolvedNote")
+                        .HasColumnType("text")
+                        .HasColumnName("resolved_note");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("severity");
+
+                    b.Property<string>("Source")
+                        .HasColumnType("text")
+                        .HasColumnName("source");
+
+                    b.Property<string>("StackTrace")
+                        .HasColumnType("text")
+                        .HasColumnName("stack_trace");
+
+                    b.Property<int?>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_exception_logs");
+
+                    b.ToTable("exception_logs");
                 });
 
             modelBuilder.Entity("SchoolManagement.Domain.Entities.Expense", b =>
@@ -543,6 +597,10 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("status");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -605,6 +663,10 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("student_id");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -651,6 +713,10 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("posted_by");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -722,6 +788,10 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("photo_url");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -736,6 +806,42 @@ namespace SchoolManagement.Infrastructure.Migrations
                     b.HasIndex("Email");
 
                     b.ToTable("parents");
+                });
+
+            modelBuilder.Entity("SchoolManagement.Domain.Entities.Permission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("Module")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("module");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_permissions");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("permissions");
                 });
 
             modelBuilder.Entity("SchoolManagement.Domain.Entities.Section", b =>
@@ -764,6 +870,10 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("name");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -878,6 +988,10 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("short_bio");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -927,6 +1041,10 @@ namespace SchoolManagement.Infrastructure.Migrations
                     b.Property<int>("StudentId")
                         .HasColumnType("integer")
                         .HasColumnName("student_id");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
 
                     b.Property<int>("TransportId")
                         .HasColumnType("integer")
@@ -985,6 +1103,10 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("subject_type");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1080,6 +1202,10 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("subject_id");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -1149,6 +1275,10 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("teacher_id");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -1164,6 +1294,114 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .HasDatabaseName("i_x_teacher_payments_teacher_id");
 
                     b.ToTable("teacher_payments");
+                });
+
+            modelBuilder.Entity("SchoolManagement.Domain.Entities.Tenant", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("address");
+
+                    b.Property<string>("ContactEmail")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("contact_email");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_login_at");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("logo_url");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("phone");
+
+                    b.Property<DateTime?>("PlanExpiryDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("plan_expiry_date");
+
+                    b.Property<string>("SlugCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("slug_code");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_tenants");
+
+                    b.HasIndex("ContactEmail");
+
+                    b.HasIndex("SlugCode")
+                        .IsUnique();
+
+                    b.ToTable("tenants");
+                });
+
+            modelBuilder.Entity("SchoolManagement.Domain.Entities.TenantPermission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("GrantedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("granted_at");
+
+                    b.Property<string>("GrantedBy")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("granted_by");
+
+                    b.Property<int>("PermissionId")
+                        .HasColumnType("integer")
+                        .HasColumnName("permission_id");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_tenant_permissions");
+
+                    b.HasIndex("PermissionId")
+                        .HasDatabaseName("i_x_tenant_permissions_permission_id");
+
+                    b.HasIndex("TenantId", "PermissionId")
+                        .IsUnique();
+
+                    b.ToTable("tenant_permissions");
                 });
 
             modelBuilder.Entity("SchoolManagement.Domain.Entities.Transport", b =>
@@ -1216,6 +1454,10 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("route_title");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -1230,6 +1472,46 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .HasName("p_k_transports");
 
                     b.ToTable("transports");
+                });
+
+            modelBuilder.Entity("SchoolManagement.Infrastructure.Identity.AppRole", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("text")
+                        .HasColumnName("concurrency_stamp");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NormalizedName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("normalized_name");
+
+                    b.Property<int?>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_asp_net_roles");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("role_name_index");
+
+                    b.ToTable("asp_net_roles", (string)null);
                 });
 
             modelBuilder.Entity("SchoolManagement.Infrastructure.Identity.ApplicationUser", b =>
@@ -1264,6 +1546,14 @@ namespace SchoolManagement.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("first_name");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsSuperAdmin")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_super_admin");
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -1311,6 +1601,10 @@ namespace SchoolManagement.Infrastructure.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text")
                         .HasColumnName("security_stamp");
+
+                    b.Property<int?>("TenantId")
+                        .HasColumnType("integer")
+                        .HasColumnName("tenant_id");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean")
@@ -1662,12 +1956,12 @@ namespace SchoolManagement.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("SchoolManagement.Infrastructure.Identity.AppRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("f_k_asp_net_role_claims_asp_net_roles_role_id");
+                        .HasConstraintName("f_k_asp_net_role_claims__asp_net_roles_role_id");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
@@ -1692,12 +1986,12 @@ namespace SchoolManagement.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("SchoolManagement.Infrastructure.Identity.AppRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("f_k_asp_net_user_roles_asp_net_roles_role_id");
+                        .HasConstraintName("f_k_asp_net_user_roles__asp_net_roles_role_id");
 
                     b.HasOne("SchoolManagement.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
@@ -1960,6 +2254,27 @@ namespace SchoolManagement.Infrastructure.Migrations
                     b.Navigation("Teacher");
                 });
 
+            modelBuilder.Entity("SchoolManagement.Domain.Entities.TenantPermission", b =>
+                {
+                    b.HasOne("SchoolManagement.Domain.Entities.Permission", "Permission")
+                        .WithMany("TenantPermissions")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_tenant_permissions_permissions_permission_id");
+
+                    b.HasOne("SchoolManagement.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("TenantPermissions")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_tenant_permissions_tenants_tenant_id");
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("SchoolManagement.Domain.Entities.Class", b =>
                 {
                     b.Navigation("Exams");
@@ -1981,6 +2296,11 @@ namespace SchoolManagement.Infrastructure.Migrations
             modelBuilder.Entity("SchoolManagement.Domain.Entities.Parent", b =>
                 {
                     b.Navigation("Students");
+                });
+
+            modelBuilder.Entity("SchoolManagement.Domain.Entities.Permission", b =>
+                {
+                    b.Navigation("TenantPermissions");
                 });
 
             modelBuilder.Entity("SchoolManagement.Domain.Entities.Section", b =>
@@ -2013,6 +2333,11 @@ namespace SchoolManagement.Infrastructure.Migrations
                     b.Navigation("ClassRoutines");
 
                     b.Navigation("Payments");
+                });
+
+            modelBuilder.Entity("SchoolManagement.Domain.Entities.Tenant", b =>
+                {
+                    b.Navigation("TenantPermissions");
                 });
 
             modelBuilder.Entity("SchoolManagement.Domain.Entities.Transport", b =>

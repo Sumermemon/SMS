@@ -48,7 +48,7 @@ public interface ISubjectService
 
 public interface IClassRoutineService
 {
-    Task<PagedResult<ClassRoutineListDto>> GetAllAsync(int? classId, string? day, int page, int pageSize);
+    Task<PagedResult<ClassRoutineListDto>> GetAllAsync(int? classId, int? sectionId, int? teacherId, string? day, int page, int pageSize);
     Task<ClassRoutineListDto?> GetByIdAsync(int id);
     Task<ClassRoutineListDto> CreateAsync(CreateClassRoutineDto dto);
     Task<ClassRoutineListDto?> UpdateAsync(int id, UpdateClassRoutineDto dto);

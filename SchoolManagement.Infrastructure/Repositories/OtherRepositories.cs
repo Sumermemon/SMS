@@ -133,10 +133,10 @@ public class NoticeRepository : INoticeRepository
     public NoticeRepository(AppDbContext db) => _db = db;
 
     public async Task<Notice?> GetByIdAsync(int id)
-        => await _db.Notices.FirstOrDefaultAsync(n => n.Id == id);
+        => await _db.Notices.Include(n => n.TargetClass).FirstOrDefaultAsync(n => n.Id == id);
 
     public async Task<IEnumerable<Notice>> GetAllAsync()
-        => await _db.Notices.OrderByDescending(n => n.Date).ToListAsync();
+        => await _db.Notices.Include(n => n.TargetClass).OrderByDescending(n => n.Date).ToListAsync();
 
     public async Task AddAsync(Notice notice)
     {
@@ -209,14 +209,19 @@ public class ClassRoutineRepository : IClassRoutineRepository
 
     public async Task<ClassRoutine?> GetByIdAsync(int id)
         => await _db.ClassRoutines
+            .AsNoTracking()
             .Include(r => r.Subject)
             .Include(r => r.Class)
             .Include(r => r.Section)
             .Include(r => r.Teacher)
             .FirstOrDefaultAsync(r => r.Id == id);
 
+    public async Task<ClassRoutine?> GetByIdForUpdateAsync(int id)
+        => await _db.ClassRoutines.FirstOrDefaultAsync(r => r.Id == id);
+
     public async Task<IEnumerable<ClassRoutine>> GetAllAsync()
         => await _db.ClassRoutines
+            .AsNoTracking()
             .Include(r => r.Subject)
             .Include(r => r.Class)
             .Include(r => r.Section)
@@ -232,7 +237,10 @@ public class ClassRoutineRepository : IClassRoutineRepository
     public async Task UpdateAsync(ClassRoutine routine)
     {
         routine.UpdatedAt = DateTime.UtcNow;
-        _db.ClassRoutines.Update(routine);
+        if (_db.Entry(routine).State == EntityState.Detached)
+        {
+            _db.ClassRoutines.Update(routine);
+        }
         await _db.SaveChangesAsync();
     }
 

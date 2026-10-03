@@ -15,6 +15,9 @@ public class TeacherRepository : ITeacherRepository
             .Include(t => t.Subject)
             .Include(t => t.Class)
             .Include(t => t.Section)
+            .Include(t => t.ClassRoutines).ThenInclude(r => r.Subject)
+            .Include(t => t.ClassRoutines).ThenInclude(r => r.Class)
+            .Include(t => t.ClassRoutines).ThenInclude(r => r.Section)
             .FirstOrDefaultAsync(t => t.Id == id);
 
     public async Task<IEnumerable<Teacher>> GetAllAsync()
@@ -22,6 +25,9 @@ public class TeacherRepository : ITeacherRepository
             .Include(t => t.Subject)
             .Include(t => t.Class)
             .Include(t => t.Section)
+            .Include(t => t.ClassRoutines).ThenInclude(r => r.Subject)
+            .Include(t => t.ClassRoutines).ThenInclude(r => r.Class)
+            .Include(t => t.ClassRoutines).ThenInclude(r => r.Section)
             .ToListAsync();
 
     public async Task AddAsync(Teacher teacher)

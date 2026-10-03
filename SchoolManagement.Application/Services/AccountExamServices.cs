@@ -186,7 +186,22 @@ public class ExpenseService : IExpenseService
 
     public async Task<ExpenseListDto> CreateAsync(CreateExpenseDto dto)
     {
-        var entity = new Expense { Name = dto.Name, ExpenseType = dto.ExpenseType, Amount = dto.Amount, Phone = dto.Phone, Email = dto.Email, Date = dto.Date, PhotoUrl = dto.PhotoUrl, Remarks = dto.Remarks };
+        var status = ExpenseStatus.Pending;
+        if (!string.IsNullOrWhiteSpace(dto.Status) && Enum.TryParse<ExpenseStatus>(dto.Status, true, out var parsed))
+            status = parsed;
+
+        var entity = new Expense
+        {
+            Name = dto.Name,
+            ExpenseType = dto.ExpenseType,
+            Amount = dto.Amount,
+            Phone = dto.Phone,
+            Email = dto.Email,
+            Date = dto.Date,
+            PhotoUrl = dto.PhotoUrl,
+            Remarks = dto.Remarks,
+            Status = status
+        };
         await _repo.AddAsync(entity);
         return new ExpenseListDto(entity.Id, entity.PhotoUrl ?? string.Empty, entity.Name, entity.ExpenseType, entity.Amount, entity.Status.ToString(), entity.Phone, entity.Email, entity.Date.ToString("yyyy-MM-dd"));
     }
@@ -195,9 +210,18 @@ public class ExpenseService : IExpenseService
     {
         var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return null;
-        entity.Name = dto.Name; entity.ExpenseType = dto.ExpenseType; entity.Amount = dto.Amount;
-        entity.Status = dto.Status; entity.Phone = dto.Phone; entity.Email = dto.Email;
-        entity.Date = dto.Date; entity.PhotoUrl = dto.PhotoUrl; entity.Remarks = dto.Remarks;
+        entity.Name = dto.Name;
+        entity.ExpenseType = dto.ExpenseType;
+        entity.Amount = dto.Amount;
+        if (!string.IsNullOrWhiteSpace(dto.Status) && Enum.TryParse<ExpenseStatus>(dto.Status, true, out var parsedStatus))
+        {
+            entity.Status = parsedStatus;
+        }
+        entity.Phone = dto.Phone;
+        entity.Email = dto.Email;
+        entity.Date = dto.Date;
+        entity.PhotoUrl = dto.PhotoUrl;
+        entity.Remarks = dto.Remarks;
         await _repo.UpdateAsync(entity);
         return await GetByIdAsync(id);
     }

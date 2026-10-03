@@ -18,7 +18,9 @@ public record AuthResponseDto(
     string Email,
     string FullName,
     string Role,
-    string UserId
+    string UserId,
+    int? TenantId,
+    bool IsSuperAdmin
 );
 
 public record RefreshTokenDto(string Token, string RefreshToken);

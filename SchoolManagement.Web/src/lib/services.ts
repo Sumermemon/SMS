@@ -126,3 +126,60 @@ export const noticeApi = {
   update: (id: number, data: unknown) => api.put(`/notices/${id}`, data),
   delete: (id: number) => api.delete(`/notices/${id}`),
 }
+
+// ─── Super Admin: Tenants ──────────────────────────────────────────────────────
+export const tenantApi = {
+  getAll: () => api.get('/tenants'),
+  getById: (id: number) => api.get(`/tenants/${id}`),
+  getStats: () => api.get('/tenants/stats'),
+  create: (data: unknown) => api.post('/tenants', data),
+  update: (id: number, data: unknown) => api.put(`/tenants/${id}`, data),
+  delete: (id: number) => api.delete(`/tenants/${id}`),
+  getPermissions: (id: number) => api.get(`/tenants/${id}/permissions`),
+  setPermissions: (id: number, permissionNames: string[]) => api.post(`/tenants/${id}/permissions`, { permissionNames }),
+  grantPermissions: (id: number, data: unknown) => api.post(`/tenants/${id}/permissions`, data),
+  revokePermission: (id: number, permissionName: string) => api.delete(`/tenants/${id}/permissions/${permissionName}`),
+}
+
+// ─── Super Admin: Exception Logs ───────────────────────────────────────────────
+export const exceptionLogApi = {
+  getAll: (params?: Record<string, unknown>) => api.get('/exceptionlogs', { params }),
+  getById: (id: number) => api.get(`/exceptionlogs/${id}`),
+  resolve: (id: number, data: unknown) => api.patch(`/exceptionlogs/${id}/resolve`, data),
+  clearResolved: () => api.delete('/exceptionlogs/resolved'),
+}
+
+// ─── Admin: Users ─────────────────────────────────────────────────────────────
+export const userApi = {
+  getAll: (params?: Record<string, unknown>) => api.get('/users', { params }),
+  getById: (id: string) => api.get(`/users/${id}`),
+  create: (data: unknown) => api.post('/users', data),
+  update: (id: string, data: unknown) => api.put(`/users/${id}`, data),
+  delete: (id: string) => api.delete(`/users/${id}`),
+  assignRole: (userId: string, roleName: string) => api.post(`/users/${userId}/role`, { roleName }),
+  assignRoles: (userId: string, roleNames: string[]) => api.post(`/users/${userId}/roles`, roleNames),
+  getUserRoles: (userId: string) => api.get(`/users/${userId}/roles`),
+}
+
+// ─── Admin: Roles ─────────────────────────────────────────────────────────────
+export const roleApi = {
+  getAll: () => api.get('/roles'),
+  getById: (id: string) => api.get(`/roles/${id}`),
+  create: (data: unknown) => api.post('/roles', data),
+  update: (id: string, data: unknown) => api.put(`/roles/${id}`, data),
+  delete: (id: string) => api.delete(`/roles/${id}`),
+  assignPermissions: (roleId: string, permissions: string[]) => api.post(`/roles/${roleId}/permissions`, permissions),
+  getRolePermissions: (roleId: string) => api.get(`/roles/${roleId}/permissions`),
+}
+
+// ─── Admin: Permissions ───────────────────────────────────────────────────────
+export const permissionApi = {
+  getAll: () => api.get('/permissions'),
+}
+
+// ─── Super Admin: CMS & System Settings ───────────────────────────────────────
+export const cmsApi = {
+  getPublic: () => api.get('/cms/public'),
+  getSettings: () => api.get('/cms/settings'),
+  updateSettings: (data: unknown) => api.put('/cms/settings', data),
+}

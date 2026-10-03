@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SchoolManagement.Application.DTOs.Teachers;
 using SchoolManagement.Application.DTOs.Accounts;
 using SchoolManagement.Application.Interfaces.Services;
+using SchoolManagement.Infrastructure.Identity;
 
 namespace SchoolManagement.API.Controllers;
 
@@ -15,10 +16,12 @@ public class TeachersController : ControllerBase
     public TeachersController(ITeacherService service) => _service = service;
 
     [HttpGet]
+    [Authorize(Policy = Permissions.Teachers.View)]
     public async Task<IActionResult> GetAll([FromQuery] int? subjectId, [FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         => Ok(await _service.GetAllAsync(subjectId, search, page, pageSize));
 
     [HttpGet("{id:int}")]
+    [Authorize(Policy = Permissions.Teachers.View)]
     public async Task<IActionResult> GetById(int id)
     {
         var result = await _service.GetByIdAsync(id);
@@ -26,7 +29,7 @@ public class TeachersController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.Teachers.Create)]
     public async Task<IActionResult> Create([FromBody] CreateTeacherDto dto)
     {
         var created = await _service.CreateAsync(dto);
@@ -34,7 +37,7 @@ public class TeachersController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.Teachers.Edit)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateTeacherDto dto)
     {
         var result = await _service.UpdateAsync(id, dto);
@@ -42,7 +45,7 @@ public class TeachersController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.Teachers.Delete)]
     public async Task<IActionResult> Delete(int id)
     {
         var success = await _service.DeleteAsync(id);
@@ -59,6 +62,7 @@ public class TeacherPaymentsController : ControllerBase
     public TeacherPaymentsController(ITeacherPaymentService service) => _service = service;
 
     [HttpGet]
+    [Authorize(Policy = Permissions.Expenses.View)]
     public async Task<IActionResult> GetAll([FromQuery] int? teacherId)
     {
         var result = teacherId.HasValue ? await _service.GetByTeacherIdAsync(teacherId.Value) : await _service.GetAllAsync();
@@ -66,11 +70,11 @@ public class TeacherPaymentsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.Expenses.Create)]
     public async Task<IActionResult> Create([FromBody] CreateTeacherPaymentDto dto) => Ok(await _service.CreateAsync(dto));
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.Expenses.Edit)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateTeacherPaymentDto dto)
     {
         var result = await _service.UpdateAsync(id, dto);
@@ -78,6 +82,6 @@ public class TeacherPaymentsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.Expenses.Delete)]
     public async Task<IActionResult> Delete(int id) => await _service.DeleteAsync(id) ? NoContent() : NotFound();
 }

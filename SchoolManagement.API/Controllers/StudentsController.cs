@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolManagement.Application.DTOs.Students;
 using SchoolManagement.Application.Interfaces.Services;
+using SchoolManagement.Infrastructure.Identity;
 
 namespace SchoolManagement.API.Controllers;
 
@@ -14,6 +15,7 @@ public class StudentsController : ControllerBase
     public StudentsController(IStudentService service) => _service = service;
 
     [HttpGet]
+    [Authorize(Policy = Permissions.Students.View)]
     public async Task<IActionResult> GetAll(
         [FromQuery] int? classId,
         [FromQuery] string? search,
@@ -22,6 +24,7 @@ public class StudentsController : ControllerBase
         => Ok(await _service.GetAllAsync(classId, search, page, pageSize));
 
     [HttpGet("{id:int}")]
+    [Authorize(Policy = Permissions.Students.View)]
     public async Task<IActionResult> GetById(int id)
     {
         var result = await _service.GetByIdAsync(id);
@@ -29,7 +32,7 @@ public class StudentsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.Students.Create)]
     public async Task<IActionResult> Create([FromBody] CreateStudentDto dto)
     {
         var created = await _service.CreateAsync(dto);
@@ -37,7 +40,7 @@ public class StudentsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.Students.Edit)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateStudentDto dto)
     {
         var result = await _service.UpdateAsync(id, dto);
@@ -45,7 +48,7 @@ public class StudentsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.Students.Delete)]
     public async Task<IActionResult> Delete(int id)
     {
         var success = await _service.DeleteAsync(id);
@@ -53,7 +56,7 @@ public class StudentsController : ControllerBase
     }
 
     [HttpPost("promote")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = Permissions.Students.Edit)]
     public async Task<IActionResult> Promote([FromBody] PromoteStudentDto dto)
     {
         var success = await _service.PromoteAsync(dto);

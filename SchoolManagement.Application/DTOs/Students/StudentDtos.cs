@@ -14,7 +14,9 @@ public record StudentListDto(
     string Address,
     DateOnly DateOfBirth,
     string Phone,
-    string Email
+    string Email,
+    int? ClassId = null,
+    int? SectionId = null
 );
 
 public record StudentDetailDto(

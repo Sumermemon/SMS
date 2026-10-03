@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { examApi, gradeApi, studentApi } from '@/lib/services'
 import { Save, Search } from 'lucide-react'
@@ -14,20 +14,47 @@ export default function ExamGradesPage() {
   const exams = examsData?.data ?? []
 
   // Fetch specific exam details
-  const { data: currentExam } = useQuery({
+  const { data: currentExam, isLoading: examLoading } = useQuery({
     queryKey: ['exam', selectedExamId],
     queryFn: () => examApi.getById(Number(selectedExamId)).then(r => r.data),
     enabled: !!selectedExamId
   })
 
+  const [filterBySectionOnly, setFilterBySectionOnly] = useState(true)
+
   // Fetch students for the exam's class
-  const { data: studentsData } = useQuery({
+  const { data: studentsData, isLoading: studentsLoading } = useQuery({
     queryKey: ['students-list', currentExam?.classId],
     queryFn: () => studentApi.getAll({ classId: currentExam?.classId, page: 1, pageSize: 1000 }).then(r => r.data),
     enabled: !!currentExam?.classId
   })
-  // Filter by section locally if exam has a specific section
-  const students = (studentsData?.data ?? []).filter((s: any) => !currentExam?.sectionId || s.sectionId === currentExam.sectionId)
+
+  const rawStudents = studentsData?.data ?? []
+
+  // Filter students with multi-level section matching and fallback
+  const students = useMemo(() => {
+    if (!rawStudents.length) return []
+    if (!currentExam?.sectionId || !filterBySectionOnly) return rawStudents
+
+    const filtered = rawStudents.filter((s: any) => {
+      // 1. Direct sectionId match
+      if (s.sectionId != null && s.sectionId !== 0) {
+        return s.sectionId === currentExam.sectionId
+      }
+      // 2. Section name match (handling "A", "Section A", etc.)
+      if (s.sectionName && currentExam.sectionName) {
+        const cleanS = s.sectionName.replace(/section/i, '').trim().toLowerCase()
+        const cleanE = currentExam.sectionName.replace(/section/i, '').trim().toLowerCase()
+        if (cleanS === cleanE || s.sectionName.trim().toLowerCase() === currentExam.sectionName.trim().toLowerCase()) {
+          return true
+        }
+      }
+      return false
+    })
+
+    // If section filtering gave 0 students but the class has students, return all class students as fallback
+    return filtered.length > 0 ? filtered : rawStudents
+  }, [rawStudents, currentExam, filterBySectionOnly])
 
   // Fetch existing grades for this exam
   const { data: existingGrades, isLoading: gradesLoading } = useQuery({
@@ -37,10 +64,10 @@ export default function ExamGradesPage() {
   })
 
   useEffect(() => {
-    if (students.length > 0 && existingGrades) {
+    if (students.length > 0) {
       const newState: Record<number, any> = {}
       students.forEach((s: any) => {
-        const eg = existingGrades.find((g: any) => g.studentId === s.id)
+        const eg = existingGrades?.find((g: any) => g.studentId === s.id)
         if (eg) {
           newState[s.id] = { id: eg.id, marksObtained: eg.marksObtained, grade: eg.grade || '', remarks: eg.remarks || '' }
         } else {
@@ -49,7 +76,7 @@ export default function ExamGradesPage() {
       })
       setGradesState(newState)
     }
-  }, [studentsData, existingGrades])
+  }, [students, existingGrades])
 
   const bulkCreateMut = useMutation({
     mutationFn: (payload: any) => gradeApi.bulkCreate(payload),
@@ -115,19 +142,50 @@ export default function ExamGradesPage() {
               <div style={{ fontSize: 40 }}>🎓</div>
               <p>Select an exam to enter grades.</p>
             </div>
-          ) : gradesLoading ? (
+          ) : (examLoading || studentsLoading || gradesLoading) ? (
              <div className="loader"><div className="spinner" /></div>
           ) : students.length === 0 ? (
             <div className="empty-state">
-              <p>No students found for this exam's class/section.</p>
+              <p>No students found for this exam's class ({currentExam?.className || 'Class'}).</p>
+              <p className="empty-state-sub" style={{ marginTop: 4 }}>
+                {rawStudents.length > 0
+                  ? `There are ${rawStudents.length} students in this class, but none matched section ${currentExam?.sectionName}.`
+                  : 'Ensure students are enrolled in this class from the Students module.'}
+              </p>
+              {rawStudents.length > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ marginTop: 12 }}
+                  onClick={() => setFilterBySectionOnly(false)}
+                >
+                  Show all {rawStudents.length} students of {currentExam?.className}
+                </button>
+              )}
             </div>
           ) : (
             <>
+              <div style={{ padding: '10px 16px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                <div style={{ fontSize: 12.5, color: 'var(--text-1)' }}>
+                  Showing <strong>{students.length}</strong> students for {currentExam?.className} {currentExam?.sectionName ? `(Section ${currentExam.sectionName})` : ''}
+                </div>
+                {currentExam?.sectionId && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-xs"
+                    onClick={() => setFilterBySectionOnly(v => !v)}
+                    style={{ fontSize: 11 }}
+                  >
+                    {filterBySectionOnly ? `Show all students from ${currentExam?.className}` : `Filter by Section ${currentExam?.sectionName} only`}
+                  </button>
+                )}
+              </div>
               <table className="table">
                 <thead>
                   <tr>
                     <th>Roll No</th>
                     <th>Student Name</th>
+                    <th>Section</th>
                     <th>Marks (out of {currentExam?.totalMarks || 100})</th>
                     <th>Grade</th>
                     <th>Remarks</th>
@@ -138,8 +196,13 @@ export default function ExamGradesPage() {
                     const state = gradesState[s.id] || { marksObtained: '', grade: '', remarks: '' }
                     return (
                       <tr key={s.id}>
-                        <td>{s.rollNumber || '—'}</td>
+                        <td>{s.roll ?? s.rollNumber ?? '—'}</td>
                         <td><strong>{s.name}</strong></td>
+                        <td>
+                          <span className="badge" style={{ fontSize: 11 }}>
+                            {s.sectionName || '—'}
+                          </span>
+                        </td>
                         <td>
                           <input 
                             type="number"

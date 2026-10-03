@@ -42,6 +42,9 @@ public class TeacherService : ITeacherService
 
     public async Task<TeacherDetailDto> CreateAsync(CreateTeacherDto dto)
     {
+        var subjectIds = dto.AssignedSubjectIds ?? (dto.SubjectId.HasValue ? new List<int> { dto.SubjectId.Value } : new List<int>());
+        var classIds = dto.AssignedClassIds ?? (dto.ClassId.HasValue ? new List<int> { dto.ClassId.Value } : new List<int>());
+
         var entity = new Teacher
         {
             FirstName = dto.FirstName,
@@ -54,9 +57,11 @@ public class TeacherService : ITeacherService
             PhotoUrl = dto.PhotoUrl,
             Religion = dto.Religion,
             JoiningDate = dto.JoiningDate,
-            SubjectId = dto.SubjectId,
-            ClassId = dto.ClassId,
+            SubjectId = dto.SubjectId ?? subjectIds.FirstOrDefault(),
+            ClassId = dto.ClassId ?? classIds.FirstOrDefault(),
             SectionId = dto.SectionId,
+            AssignedSubjectIds = subjectIds.Any() ? string.Join(",", subjectIds.Distinct()) : null,
+            AssignedClassIds = classIds.Any() ? string.Join(",", classIds.Distinct()) : null,
         };
         await _repo.AddAsync(entity);
         var created = await _repo.GetByIdAsync(entity.Id);
@@ -67,6 +72,10 @@ public class TeacherService : ITeacherService
     {
         var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return null;
+
+        var subjectIds = dto.AssignedSubjectIds ?? (dto.SubjectId.HasValue ? new List<int> { dto.SubjectId.Value } : new List<int>());
+        var classIds = dto.AssignedClassIds ?? (dto.ClassId.HasValue ? new List<int> { dto.ClassId.Value } : new List<int>());
+
         entity.FirstName = dto.FirstName;
         entity.LastName = dto.LastName;
         entity.Gender = dto.Gender;
@@ -77,9 +86,12 @@ public class TeacherService : ITeacherService
         entity.PhotoUrl = dto.PhotoUrl;
         entity.Religion = dto.Religion;
         entity.JoiningDate = dto.JoiningDate;
-        entity.SubjectId = dto.SubjectId;
-        entity.ClassId = dto.ClassId;
+        entity.SubjectId = dto.SubjectId ?? subjectIds.FirstOrDefault();
+        entity.ClassId = dto.ClassId ?? classIds.FirstOrDefault();
         entity.SectionId = dto.SectionId;
+        entity.AssignedSubjectIds = subjectIds.Any() ? string.Join(",", subjectIds.Distinct()) : null;
+        entity.AssignedClassIds = classIds.Any() ? string.Join(",", classIds.Distinct()) : null;
+
         await _repo.UpdateAsync(entity);
         var updated = await _repo.GetByIdAsync(id);
         return MapToDetail(updated!);
@@ -92,39 +104,115 @@ public class TeacherService : ITeacherService
         return true;
     }
 
-    private static TeacherListDto MapToListDto(Teacher t) => new(
-        t.Id,
-        t.PhotoUrl ?? string.Empty,
-        $"{t.FirstName} {t.LastName}",
-        t.Gender.ToString(),
-        t.Class?.Name,
-        t.Subject?.Name,
-        t.Section?.Name,
-        t.Address,
-        t.Phone,
-        t.Email,
-        t.JoiningDate.ToString("yyyy-MM-dd")
-    );
+    private static (List<string> subjects, List<string> classes, List<int> subjectIds, List<int> classIds) ExtractAssigned(Teacher t)
+    {
+        var subjects = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var classes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var subjectIds = new HashSet<int>();
+        var classIds = new HashSet<int>();
 
-    private static TeacherDetailDto MapToDetail(Teacher t) => new(
-        t.Id,
-        t.FirstName,
-        t.LastName,
-        t.Gender.ToString(),
-        t.DateOfBirth.ToString("yyyy-MM-dd"),
-        t.Email,
-        t.Phone,
-        t.Address,
-        t.PhotoUrl,
-        t.Religion,
-        t.JoiningDate.ToString("yyyy-MM-dd"),
-        t.SubjectId,
-        t.Subject?.Name,
-        t.ClassId,
-        t.Class?.Name,
-        t.SectionId,
-        t.Section?.Name
-    );
+        if (t.Subject != null && !string.IsNullOrWhiteSpace(t.Subject.Name))
+            subjects.Add(t.Subject.Name);
+        if (t.SubjectId.HasValue)
+            subjectIds.Add(t.SubjectId.Value);
+
+        if (t.Class != null && !string.IsNullOrWhiteSpace(t.Class.Name))
+            classes.Add(t.Class.Name);
+        if (t.ClassId.HasValue)
+            classIds.Add(t.ClassId.Value);
+
+        if (!string.IsNullOrWhiteSpace(t.AssignedSubjectIds))
+        {
+            foreach (var part in t.AssignedSubjectIds.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (int.TryParse(part.Trim(), out var sid)) subjectIds.Add(sid);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(t.AssignedClassIds))
+        {
+            foreach (var part in t.AssignedClassIds.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (int.TryParse(part.Trim(), out var cid)) classIds.Add(cid);
+            }
+        }
+
+        // Aggregate from all timetable routines
+        if (t.ClassRoutines != null)
+        {
+            foreach (var r in t.ClassRoutines)
+            {
+                if (r.Subject != null && !string.IsNullOrWhiteSpace(r.Subject.Name))
+                {
+                    subjects.Add(r.Subject.Name);
+                    subjectIds.Add(r.SubjectId);
+                }
+                if (r.Class != null && !string.IsNullOrWhiteSpace(r.Class.Name))
+                {
+                    classes.Add(r.Class.Name);
+                    classIds.Add(r.ClassId);
+                }
+            }
+        }
+
+        return (subjects.ToList(), classes.ToList(), subjectIds.ToList(), classIds.ToList());
+    }
+
+    private static TeacherListDto MapToListDto(Teacher t)
+    {
+        var (subjects, classes, subjectIds, classIds) = ExtractAssigned(t);
+        var primarySubject = subjects.FirstOrDefault() ?? t.Subject?.Name;
+        var primaryClass = classes.FirstOrDefault() ?? t.Class?.Name;
+
+        return new TeacherListDto(
+            t.Id,
+            t.PhotoUrl ?? string.Empty,
+            $"{t.FirstName} {t.LastName}",
+            t.Gender.ToString(),
+            primaryClass,
+            primarySubject,
+            t.Section?.Name,
+            t.Address,
+            t.Phone,
+            t.Email,
+            t.JoiningDate.ToString("yyyy-MM-dd"),
+            subjects,
+            classes,
+            subjectIds,
+            classIds
+        );
+    }
+
+    private static TeacherDetailDto MapToDetail(Teacher t)
+    {
+        var (subjects, classes, subjectIds, classIds) = ExtractAssigned(t);
+        var primarySubject = subjects.FirstOrDefault() ?? t.Subject?.Name;
+        var primaryClass = classes.FirstOrDefault() ?? t.Class?.Name;
+
+        return new TeacherDetailDto(
+            t.Id,
+            t.FirstName,
+            t.LastName,
+            t.Gender.ToString(),
+            t.DateOfBirth.ToString("yyyy-MM-dd"),
+            t.Email,
+            t.Phone,
+            t.Address,
+            t.PhotoUrl,
+            t.Religion,
+            t.JoiningDate.ToString("yyyy-MM-dd"),
+            t.SubjectId ?? subjectIds.FirstOrDefault(),
+            primarySubject,
+            t.ClassId ?? classIds.FirstOrDefault(),
+            primaryClass,
+            t.SectionId,
+            t.Section?.Name,
+            subjects,
+            classes,
+            subjectIds,
+            classIds
+        );
+    }
 }
 
 public class TeacherPaymentService : ITeacherPaymentService
@@ -147,14 +235,25 @@ public class TeacherPaymentService : ITeacherPaymentService
 
     public async Task<TeacherPaymentDto> CreateAsync(CreateTeacherPaymentDto dto)
     {
+        var paidDate = dto.PaidDate ?? dto.PaymentDate ?? (dto.Month.HasValue && dto.Year.HasValue ? new DateOnly(dto.Year.Value, dto.Month.Value, 1) : DateOnly.FromDateTime(DateTime.Today));
+        var status = PaymentStatus.Pending;
+        if (!string.IsNullOrWhiteSpace(dto.Status))
+        {
+            if (dto.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) || dto.Status.Equals("Paid", StringComparison.OrdinalIgnoreCase))
+                status = PaymentStatus.Paid;
+            else if (Enum.TryParse<PaymentStatus>(dto.Status, true, out var parsed))
+                status = parsed;
+        }
+
         var entity = new TeacherPayment
         {
             TeacherId = dto.TeacherId,
             Amount = dto.Amount,
-            Month = dto.Month,
-            Year = dto.Year,
-            Notes = dto.Notes,
-            Status = PaymentStatus.Pending
+            Month = dto.Month ?? paidDate.Month,
+            Year = dto.Year ?? paidDate.Year,
+            Notes = dto.Notes ?? dto.Remarks,
+            PaidDate = paidDate,
+            Status = status
         };
         await _repo.AddAsync(entity);
         var created = await _repo.GetByIdAsync(entity.Id);
@@ -166,11 +265,29 @@ public class TeacherPaymentService : ITeacherPaymentService
         var entity = await _repo.GetByIdAsync(id);
         if (entity == null) return null;
         entity.Amount = dto.Amount;
-        entity.Month = dto.Month;
-        entity.Year = dto.Year;
-        entity.Status = dto.Status;
-        entity.PaidDate = dto.PaidDate;
-        entity.Notes = dto.Notes;
+
+        var paidDate = dto.PaidDate ?? dto.PaymentDate;
+        if (paidDate.HasValue)
+        {
+            entity.PaidDate = paidDate.Value;
+            entity.Month = dto.Month ?? paidDate.Value.Month;
+            entity.Year = dto.Year ?? paidDate.Value.Year;
+        }
+        else
+        {
+            if (dto.Month.HasValue) entity.Month = dto.Month.Value;
+            if (dto.Year.HasValue) entity.Year = dto.Year.Value;
+        }
+
+        if (!string.IsNullOrWhiteSpace(dto.Status))
+        {
+            if (dto.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) || dto.Status.Equals("Paid", StringComparison.OrdinalIgnoreCase))
+                entity.Status = PaymentStatus.Paid;
+            else if (Enum.TryParse<PaymentStatus>(dto.Status, true, out var parsed))
+                entity.Status = parsed;
+        }
+
+        entity.Notes = dto.Notes ?? dto.Remarks;
         await _repo.UpdateAsync(entity);
         var updated = await _repo.GetByIdAsync(id);
         return MapToDto(updated!);
@@ -191,8 +308,9 @@ public class TeacherPaymentService : ITeacherPaymentService
         tp.Amount,
         tp.Month,
         tp.Year,
-        tp.Status.ToString(),
+        tp.Status == PaymentStatus.Paid ? "Completed" : tp.Status.ToString(),
         tp.PaidDate?.ToString("yyyy-MM-dd"),
-        tp.Notes
+        tp.Notes,
+        tp.PaidDate?.ToString("yyyy-MM-dd")
     );
 }

@@ -7,19 +7,26 @@ public record NoticeDto(
     string PostedBy,
     string Date,
     int ViewCount,
-    string CreatedAt
+    string CreatedAt,
+    string TargetAudience = "Global",
+    int? TargetClassId = null,
+    string? TargetClassName = null
 );
 
 public record CreateNoticeDto(
     string Title,
     string Details,
     string PostedBy,
-    DateOnly Date
+    DateOnly Date,
+    string? TargetAudience = "Global",
+    int? TargetClassId = null
 );
 
 public record UpdateNoticeDto(
     string Title,
     string Details,
     string PostedBy,
-    DateOnly Date
+    DateOnly Date,
+    string? TargetAudience = "Global",
+    int? TargetClassId = null
 );

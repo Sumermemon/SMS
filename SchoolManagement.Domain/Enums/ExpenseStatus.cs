@@ -4,5 +4,7 @@ public enum ExpenseStatus
 {
     Paid,
     Due,
-    Pending
+    Pending,
+    Approved,
+    Rejected
 }
